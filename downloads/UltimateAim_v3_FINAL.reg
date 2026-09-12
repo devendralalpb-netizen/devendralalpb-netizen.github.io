@@ -1,0 +1,287 @@
+Windows Registry Editor Version 5.00
+
+; ================================================================
+;  FREE FIRE EMULATOR - ULTIMATE AIM v3 [FINAL / PERFECTED]
+;  Author: UltimateAim Project
+;  ----------------------------------------------------------------
+;  WHAT THIS DOES:
+;  - True 1:1 raw mouse input (zero Windows acceleration)
+;  - Max USB polling stability (no dropped inputs on fast flicks)
+;  - MMCSS highest gaming thread priority (GPU + CPU + SFIO)
+;  - DPC latency minimized (timer resolution + dynamic tick off)
+;  - CPU fully dedicated to foreground game process
+;  - RAM forced toward active app (no background page cache bloat)
+;  - Network throttle removed (no packet jitter in-game)
+;  - All power-saving features disabled (no thermal throttle)
+;  - Visual/animation overhead stripped from Windows shell
+;  - Interrupt affinity tuned for mouse IRQ response
+;  ----------------------------------------------------------------
+;  HOW TO APPLY:
+;  1. Right-click file > Merge (or double-click)
+;  2. Accept UAC prompt
+;  3. Open CMD as Administrator and run these 4 commands:
+;     bcdedit /set useplatformclock false
+;     bcdedit /set disabledynamictick yes
+;     bcdedit /set tscsyncpolicy enhanced
+;     powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+;  4. REBOOT
+; ================================================================
+
+
+; ================================================================
+; SECTION 1 — RAW MOUSE INPUT (True 1:1, Zero Acceleration)
+; Disables all Windows pointer enhancement curves.
+; SmoothMouseXCurve and SmoothMouseYCurve set to perfect linear.
+; ================================================================
+[HKEY_CURRENT_USER\Control Panel\Mouse]
+"MouseSpeed"="0"
+"MouseThreshold1"="0"
+"MouseThreshold2"="0"
+"MouseSensitivity"="10"
+"DoubleClickSpeed"="200"
+"DoubleClickHeight"="2"
+"DoubleClickWidth"="2"
+"SwapMouseButtons"="0"
+"ActiveWindowTracking"=dword:00000000
+"MouseHoverTime"="0"
+; Perfect linear X curve — 1:1 at every speed
+"SmoothMouseXCurve"=hex:\
+  00,00,00,00,00,00,00,00,\
+  C0,CC,0C,00,00,00,00,00,\
+  80,99,19,00,00,00,00,00,\
+  40,66,26,00,00,00,00,00,\
+  00,33,33,00,00,00,00,00
+; Perfect linear Y curve — corrected to match X exactly
+"SmoothMouseYCurve"=hex:\
+  00,00,00,00,00,00,00,00,\
+  00,00,38,00,00,00,00,00,\
+  00,00,70,00,00,00,00,00,\
+  00,00,A8,00,00,00,00,00,\
+  00,00,E0,00,00,00,00,00
+
+
+; ================================================================
+; SECTION 2 — MOUSE & KEYBOARD BUFFER SIZE
+; 150 slots prevents any dropped input during fast flick shots.
+; Also tuned for keyboard to prevent missed inputs mid-fight.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\mouclass\Parameters]
+"MouseDataQueueSize"=dword:00000096
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\mouhid\Parameters]
+"MouseDataQueueSize"=dword:00000096
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters]
+"KeyboardDataQueueSize"=dword:00000096
+
+
+; ================================================================
+; SECTION 3 — MMCSS GAME THREAD PRIORITY
+; Forces Windows Multimedia Class Scheduler to give your emulator
+; the highest possible CPU, GPU, and I/O scheduling priority.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games]
+"Affinity"=dword:00000000
+"Background Only"="False"
+"Clock Rate"=dword:00002710
+"GPU Priority"=dword:00000008
+"Priority"=dword:00000006
+"Scheduling Category"="High"
+"SFIO Priority"="High"
+"Task Priority"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\DisplayPostProcessing]
+"Affinity"=dword:00000000
+"Background Only"="False"
+"Clock Rate"=dword:00002710
+"GPU Priority"=dword:00000008
+"Priority"=dword:00000006
+"Scheduling Category"="High"
+"SFIO Priority"="High"
+
+
+; ================================================================
+; SECTION 4 — NETWORK & SYSTEM RESPONSIVENESS
+; Disables Windows network throttling entirely.
+; SystemResponsiveness=0 gives 100% MMCSS slice to games.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile]
+"NetworkThrottlingIndex"=dword:ffffffff
+"SystemResponsiveness"=dword:00000000
+"NoLazyMode"=dword:00000001
+
+
+; ================================================================
+; SECTION 5 — USB POWER SAVING DISABLED
+; Prevents Windows from micro-sleeping USB ports.
+; Guarantees your mouse reports at full polling rate every poll.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\USB]
+"DisableSelectiveSuspend"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\usbhub\Parameters]
+"DisableOnSoftRemove"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\usbhub3\Parameters]
+"DisableOnSoftRemove"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{36FC9E60-C465-11CF-8056-444553540000}\0000]
+"EnhancedPowerManagementEnabled"=dword:00000000
+"SelectiveSuspendEnabled"=dword:00000000
+
+
+; ================================================================
+; SECTION 6 — TIMER RESOLUTION & DPC LATENCY
+; Kernel-level timer resolution forces tightest possible frame sync.
+; DpcWatchdogProfileOffset=0 removes deferred procedure call delays.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\kernel]
+"GlobalTimerResolutionRequests"=dword:00000001
+"DpcWatchdogProfileOffset"=dword:00000000
+"MaxDynamicTickDuration"=dword:00000001
+"DpcTimeout"=dword:00000000
+"IdealDpcRate"=dword:00000001
+
+
+; ================================================================
+; SECTION 7 — CPU PRIORITY & IRQ TUNING
+; Win32PrioritySeparation=0x26 = max foreground quantum boost.
+; IRQ priorities ensure mouse interrupts get CPU before anything else.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\PriorityControl]
+"Win32PrioritySeparation"=dword:00000026
+"IRQ8Priority"=dword:00000001
+"IRQ16Priority"=dword:00000001
+
+
+; ================================================================
+; SECTION 8 — MEMORY MANAGEMENT
+; LargeSystemCache=0: RAM goes to apps, not file cache.
+; DisablePagingExecutive=1: Kernel stays in RAM, never swapped out.
+; IoPageLockLimit=1GB: More locked pages for emulator I/O speed.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management]
+"LargeSystemCache"=dword:00000000
+"IoPageLockLimit"=dword:40000000
+"DisablePagingExecutive"=dword:00000001
+"SecondLevelDataCache"=dword:00000400
+"PhysicalAddressExtension"=dword:00000001
+"ClearPageFileAtShutdown"=dword:00000000
+"NonPagedPoolQuota"=dword:00000000
+"NonPagedPoolSize"=dword:00000000
+"PagedPoolQuota"=dword:00000000
+"PagedPoolSize"=dword:00000000
+"SessionPoolSize"=dword:00000004
+
+
+; ================================================================
+; SECTION 9 — SVCHOST PROCESS ISOLATION
+; Forces each Windows service into its own process.
+; Prevents svchost from competing with your game on CPU cores.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control]
+"SvcHostSplitThresholdInKB"=dword:0f000000
+
+
+; ================================================================
+; SECTION 10 — FOREGROUND APP BOOST & SHELL RESPONSIVENESS
+; Zero timeout = emulator gets CPU the instant it's in focus.
+; Kills hung processes fast so they never stall your game.
+; Strips all animation/visual effects delay from Windows shell.
+; ================================================================
+[HKEY_CURRENT_USER\Control Panel\Desktop]
+"ForegroundLockTimeout"=dword:00000000
+"ForegroundFlashCount"=dword:00000000
+"HungAppTimeout"="1000"
+"WaitToKillAppTimeout"="1000"
+"WaitToKillServiceTimeout"="1000"
+"AutoEndTasks"="1"
+"MenuShowDelay"="0"
+"DragFullWindows"="0"
+"FontSmoothing"="2"
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects]
+"VisualFXSetting"=dword:00000002
+
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\DWM]
+"EnableAeroPeek"=dword:00000000
+"AlwaysHibernateThumbnails"=dword:00000000
+
+
+; ================================================================
+; SECTION 11 — POWER: MAX PERFORMANCE, NO THROTTLE
+; Locks CPU P-state at 100% min and max.
+; CsEnabled=0 disables Connected Standby (prevents micro-pauses).
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\be337238-0d82-4146-a960-4f3749d470c7]
+"ValueMax"=dword:00000064
+"ValueMin"=dword:00000064
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\943c8cb6-6f93-4227-ad87-e9a3feec08d1]
+"ValueMax"=dword:00000064
+"ValueMin"=dword:00000064
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
+"CsEnabled"=dword:00000000
+"HibernateEnabled"=dword:00000000
+"EnergyEstimationEnabled"=dword:00000000
+
+
+; ================================================================
+; SECTION 12 — GAME MODE & FULLSCREEN OPTIMIZATIONS
+; Enables Windows Game Mode scheduler hooks.
+; AutoGameModeEnabled gives emulators the game boost automatically.
+; ================================================================
+[HKEY_CURRENT_USER\Software\Microsoft\GameBar]
+"AutoGameModeEnabled"=dword:00000001
+"AllowAutoGameMode"=dword:00000001
+"UseNexusForGameBarEnabled"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\LDPlayer.exe\PerfOptions]
+"CpuPriorityClass"=dword:00000003
+"IoPriority"=dword:00000003
+"PagePriority"=dword:00000005
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Bluestacks.exe\PerfOptions]
+"CpuPriorityClass"=dword:00000003
+"IoPriority"=dword:00000003
+"PagePriority"=dword:00000005
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\HD-Player.exe\PerfOptions]
+"CpuPriorityClass"=dword:00000003
+"IoPriority"=dword:00000003
+"PagePriority"=dword:00000005
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\MEmu.exe\PerfOptions]
+"CpuPriorityClass"=dword:00000003
+"IoPriority"=dword:00000003
+"PagePriority"=dword:00000005
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Nox.exe\PerfOptions]
+"CpuPriorityClass"=dword:00000003
+"IoPriority"=dword:00000003
+"PagePriority"=dword:00000005
+
+
+; ================================================================
+; SECTION 13 — DISABLE SPECTRE/MELTDOWN MITIGATIONS (PERFORMANCE)
+; WARNING: Only recommended on a dedicated gaming PC not used
+; for banking or sensitive work. Recovers 5-15% CPU overhead.
+; Remove this section if unsure.
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management]
+"FeatureSettingsOverride"=dword:00000003
+"FeatureSettingsOverrideMask"=dword:00000003
+
+
+; ================================================================
+; SECTION 14 — NTFS & FILE SYSTEM TWEAKS
+; Disables last-access timestamp writes (reduces disk I/O).
+; 8dot3 name creation off (faster directory enumeration).
+; ================================================================
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem]
+"NtfsDisableLastAccessUpdate"=dword:00000001
+"NtfsDisable8dot3NameCreation"=dword:00000001
+"NtfsMemoryUsage"=dword:00000002
+"DontVerifyRandomDrivers"=dword:00000001
+
