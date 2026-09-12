@@ -1,1 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07090d">
+<title>Clean All 2.0: what a Windows cleanup script actually clears | F2 Optimization Guides</title>
+<meta name="description" content="A line-by-line walkthrough of Clean_All_2.0.bat — what each cache is, why it refills, and the one line that's riskier than it looks.">
+<link rel="canonical" href="https://example.com/guides/clean-all-2-0.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Clean All 2.0: what a Windows cleanup script actually clears", "description": "A line-by-line walkthrough of Clean_All_2.0.bat \u2014 what each cache is, why it refills, and the one line that's riskier than it looks.", "datePublished": "2026-09-12", "dateModified": "2026-09-12", "author": {"@type": "Person", "name": "F2"}, "mainEntityOfPage": "https://example.com/guides/clean-all-2-0.html"}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site">
+<div class="brand"><a href="../index.html">F2 <b>//</b> OPTIMIZATION GUIDES</a></div>
+<nav class="primary">
+<a href="../index.html">Home</a>
+<a href="../index.html#guides" class="active">Guides</a>
+<a href="../about.html">About</a>
+<a href="../privacy.html">Privacy</a>
+<a href="../contact.html">Contact</a>
+</nav>
+</header>
+<main id="main">
+
+<article>
+<div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <a href="../index.html#guides">Guides</a> <span class="sep">/</span> <span>Clean All 2.0</span></div>
+
+<h1>Clean All 2.0: what a Windows cleanup script actually clears</h1>
+<p class="dek">A line-by-line walkthrough of Clean_All_2.0.bat — what each cache is, why it refills, and the one line that's riskier than it looks.</p>
+<div class="meta-row">
+  <span><strong>Category:</strong> Disk &amp; cache cleanup</span>
+  <span><strong>Format:</strong> .bat</span>
+  <span><strong>Reviewed:</strong> September 12, 2026</span><span>5 min read</span>
+  <span class="risk-pill low">Low risk, one exception below</span>
+</div>
+
+<div class="toc">
+  <div class="toc__label">ON THIS PAGE</div>
+  <ol>
+    <li><a href="#fills-up">What actually fills these folders up</a></li>
+    <li><a href="#steps">Walking through the 14 steps</a></li>
+    <li><a href="#wont-do">What this won't do</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ol>
+</div>
+
+<div class="dl-box">
+  <div class="dl-box__info"><strong>Clean_All_2.0.bat</strong>Windows cleanup &amp; maintenance, self-elevating</div>
+  <a class="dl-btn" href="../downloads/Clean_All_2.0.bat" download>Download .bat</a>
+</div>
+
+<section id="fills-up">
+<h2>What actually fills these folders up</h2>
+<p>Most of what this script removes isn't the result of anything unusual you did — it's the normal byproduct of software that doesn't clean up after itself. Installers and updaters drop working files into <code>%TEMP%</code> and rarely delete them once they're done. Windows' thumbnail cache exists so File Explorer doesn't have to re-render a preview every time you open a folder full of images or videos; it regenerates automatically the moment it's missing, so deleting it is never destructive, just temporary.</p>
+<p>Browser "code cache" is a separate thing from your browsing history or downloads — it's compiled JavaScript bytecode Chromium-based browsers keep around so sites you revisit don't have to be recompiled from scratch. Clearing it costs you a slightly slower first load on your next few visits, nothing more. Game cache folders (Steam's <code>htmlcache</code>, the Epic Games Launcher's web cache) are the same idea applied to a store client's embedded browser, not your actual game installs or saves.</p>
+<p>The one that surprises people is Windows Update's <code>SoftwareDistribution</code> folder. Every cumulative update leaves its downloaded payload behind after installing, and on a machine that's gone a few years without a full reset of that folder, it can grow into several gigabytes of files Windows will never need again.</p>
+</section>
+
+<section id="steps">
+<h2>Walking through the 14 steps</h2>
+<p>The script groups into four real phases, even though it's numbered as 14 flat steps.</p>
+
+<h3>1. Ownership and permissions (steps 1)</h3>
+<p><code>takeown /f ... /r /d y</code> forces the current admin account to own a folder tree before deleting from it. This matters when a previous install, a crashed updater, or a different user profile left files behind with permissions that don't include your current account — without this step, some of the later delete commands would silently skip those files.</p>
+
+<h3>2. The temp &amp; cache sweep (steps 2–6, 9–10)</h3>
+<p>Recycle Bin, Windows and user <code>TEMP</code>, the thumbnail cache, and browser/game caches all get cleared here. Explorer is killed and restarted mid-way through (step 5) specifically because <code>thumbcache_*.db</code> files are locked open by Explorer while it's running — you can't delete a file that's in use, so it has to go down briefly first.</p>
+<div class="callout warn">
+<strong class="label">WORTH KNOWING</strong>
+Step 9 clears cache for Chrome, Edge and Brave by targeting their specific <code>Code Cache</code> subfolder — cache only. The Firefox line doesn't do the same scoping: it targets <code>...\Mozilla\Firefox\Profiles\*</code> directly and recursively. That's the folder holding bookmarks, saved logins, browsing history and extensions, not just cache. If you use Firefox, that line will wipe more than you probably intend. Removing that single line (or backing up your Firefox profile first) is the safe move until it's rescoped to a cache-only path.
+</div>
+
+<h3>3. The Windows Update reset (steps 12, 14)</h3>
+<p>Deleting <code>SoftwareDistribution</code> while the update services are still running risks leaving Windows Update in a half-broken state, since those services can be mid-write to that folder. Stopping <code>wuauserv</code>, <code>bits</code>, <code>dosvc</code> and <code>UsoSvc</code> first, then wiping the folder, then restarting the same services, is the standard safe order — Windows rebuilds the folder from scratch the next time it checks for updates.</p>
+
+<h3>4. Disk Cleanup, with a catch (step 13)</h3>
+<p><code>cleanmgr.exe /sagerun:50</code> runs whatever cleanup categories were saved under profile "50." That profile only exists if <code>cleanmgr /sageset:50</code> was run at least once on that machine to pick which categories to include. If it's never been set up, this step opens and closes Disk Cleanup without actually removing anything — not a bug in the script, just a step that needs a one-time setup to do anything. Run <code>cleanmgr /sageset:50</code> once, tick the categories you want, and this step starts pulling real weight.</p>
+</section>
+
+<section id="wont-do">
+<h2>What this won't do</h2>
+<p>Temp and cache files are usually measured in tens or low hundreds of megabytes, not gigabytes — this script won't rescue a drive that's actually full of games, videos or installers. On a fast NVMe SSD, the performance difference is generally not something you'll feel. Where it genuinely helps: a drive that's nearly out of space, or troubleshooting flaky Explorer/Windows Update behavior where a stale cache is a plausible cause.</p>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<details class="faq"><summary>Will this touch my Steam library or game saves?</summary><p>No. The game-related lines target launcher web caches (Steam's <code>htmlcache</code>, Epic's launcher webcache, Roblox downloads folder) — none of these are your installed games or save files.</p></details>
+<details class="faq"><summary>Why did my open windows and taskbar flash?</summary><p>Step 5 restarts <code>explorer.exe</code> to release its lock on the thumbnail cache file. It's cosmetic — open folder windows may flicker or briefly close, then Explorer comes back.</p></details>
+<details class="faq"><summary>Does it need Administrator rights?</summary><p>Yes. The script checks for an active admin session and re-launches itself with a UAC prompt if it isn't already elevated.</p></details>
+</section>
+
+<div class="related">
+<a href="windows-10-optimization.html">Windows 10 Optimization<span>Telemetry, Cortana, OneDrive and power tuning</span></a>
+<a href="windows-11-optimization.html">Windows 11 Deep Optimization<span>Where the Windows 11 version gets riskier</span></a>
+</div>
+</article>
+
+</main>
+<footer class="site">
+<div class="footer-grid">
+<div><p class="footer-tagline">Independent Windows tuning guides and free tools. Every script is published as plain text — read it before you run it.</p></div>
+<div><h4>GUIDES</h4><ul>
+<li><a href="../guides/clean-all-2-0.html">Clean All 2.0</a></li>
+<li><a href="../guides/windows-10-optimization.html">Windows 10 Optimization</a></li>
+<li><a href="../guides/windows-11-optimization.html">Windows 11 Deep Optimization</a></li>
+<li><a href="../guides/ultimateaim-v3-registry.html">UltimateAim v3 Registry</a></li>
+</ul></div>
+<div><h4>SITE</h4><ul>
+<li><a href="../about.html">About</a></li>
+<li><a href="../privacy.html">Privacy Policy</a></li>
+<li><a href="../contact.html">Contact</a></li>
+</ul></div>
+</div>
+<div class="footer-bottom"><span>© 2026 F2. Not affiliated with Microsoft or any emulator vendor named on this site.</span><span>Last reviewed September 12, 2026</span></div>
+</footer>
+</body>
+</html>
 
