@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07090d">
+<title>UltimateAim v3: the mouse and scheduling registry tweaks, key by key | F2 Optimization Guides</title>
+<meta name="description" content="Fourteen registry sections covering pointer input, MMCSS scheduling, power and memory — plus one CPU security trade-off worth understanding before you merge this.">
+<link rel="canonical" href="https://example.com/guides/ultimateaim-v3-registry.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "UltimateAim v3: the mouse and scheduling registry tweaks, key by key", "description": "Fourteen registry sections covering pointer input, MMCSS scheduling, power and memory \u2014 plus one CPU security trade-off worth understanding before you merge this.", "datePublished": "2026-09-12", "dateModified": "2026-09-12", "author": {"@type": "Person", "name": "F2"}, "mainEntityOfPage": "https://example.com/guides/ultimateaim-v3-registry.html"}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site">
+<div class="brand"><a href="../index.html">F2 <b>//</b> OPTIMIZATION GUIDES</a></div>
+<nav class="primary">
+<a href="../index.html">Home</a>
+<a href="../index.html#guides" class="active">Guides</a>
+<a href="../about.html">About</a>
+<a href="../privacy.html">Privacy</a>
+<a href="../contact.html">Contact</a>
+</nav>
+</header>
+<main id="main">
+
+<article>
+<div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <a href="../index.html#guides">Guides</a> <span class="sep">/</span> <span>UltimateAim v3 Registry</span></div>
+
+<h1>UltimateAim v3: the mouse and scheduling registry tweaks, key by key</h1>
+<p class="dek">Fourteen registry sections covering pointer input, MMCSS scheduling, power and memory — plus one CPU security trade-off worth understanding before you merge this.</p>
+<div class="meta-row">
+  <span><strong>Category:</strong> Registry / input tuning</span>
+  <span><strong>Format:</strong> .reg</span>
+  <span><strong>Reviewed:</strong> September 12, 2026</span><span>5 min read</span>
+  <span class="risk-pill high">High — includes a CPU mitigation rollback</span>
+</div>
+
+<div class="toc">
+  <div class="toc__label">ON THIS PAGE</div>
+  <ol>
+    <li><a href="#mouse">Mouse input: what's actually happening</a></li>
+    <li><a href="#mmcss">MMCSS: scheduling priority for games</a></li>
+    <li><a href="#power">Power, USB and memory tuning</a></li>
+    <li><a href="#security">The one line that's a security trade-off</a></li>
+    <li><a href="#emulators">Emulator process priority</a></li>
+    <li><a href="#apply">How to apply it</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ol>
+</div>
+
+<div class="dl-box">
+  <div class="dl-box__info"><strong>UltimateAim_v3_FINAL.reg</strong>Merge as Administrator, then run 4 commands (below)</div>
+  <a class="dl-btn amber" href="../downloads/UltimateAim_v3_FINAL.reg" download>Download .reg</a>
+</div>
+
+<section id="mouse">
+<h2>Mouse input: what's actually happening</h2>
+<p>Setting <code>MouseSpeed</code>, <code>MouseThreshold1</code> and <code>MouseThreshold2</code> to 0 is precisely what the "Enhance pointer precision" checkbox in Windows' mouse settings controls — off means flat, linear response with no acceleration curve applied. This is the standard, Microsoft-documented way to disable pointer acceleration, not a third-party trick.</p>
+<div class="callout note">
+<strong class="label">WORTH KNOWING</strong>
+The same section also defines custom <code>SmoothMouseXCurve</code> / <code>SmoothMouseYCurve</code> values — but those curve tables are only consulted by Windows when <code>MouseSpeed</code> is 1 (Enhance Pointer Precision on). With <code>MouseSpeed</code> already set to 0 here, Windows applies flat scaling directly and doesn't read the curve table at all. The linear-response result you get is coming from <code>MouseSpeed=0</code> alone — the custom curve data alongside it is inert, not harmful, just not doing anything on its own.
+</div>
+<p>The buffer size increase (<code>MouseDataQueueSize</code> / <code>KeyboardDataQueueSize</code> raised from Windows' default of 100 to 150) gives the input driver more room to queue reports before overflowing. It only matters if you're seeing dropped inputs during very fast movement on a high-polling-rate mouse — it's queue depth, not added delay, so it doesn't cost you latency to set it higher.</p>
+</section>
+
+<section id="mmcss">
+<h2>MMCSS: scheduling priority for games</h2>
+<p>The Multimedia Class Scheduler Service was originally built to stop background CPU load from causing audio glitches, by giving registered threads guaranteed scheduling priority. The <code>Tasks\Games</code> profile this section edits is one of several built-in task categories MMCSS uses — Windows' own scheduling hooks (including Game Mode) consult it for the process currently in focus. Not every game or emulator explicitly opts into this category, so real-world impact varies by title and is genuinely difficult to measure in isolation from everything else changed here.</p>
+</section>
+
+<section id="power">
+<h2>Power, USB and memory tuning</h2>
+<p>Locking CPU min/max P-state at 100% (Section 11) stops the processor from clocking down at all, even briefly at idle — zero ramp-up latency when load appears, at the cost of more heat, fan noise, and power draw around the clock. On a desktop with adequate cooling that's a fair trade for some; on a laptop it means the fan never really goes quiet and battery life drops noticeably even sitting at the desktop.</p>
+<p>Disabling USB selective suspend (Section 5) stops Windows power-managing USB ports into a low-power state, which can otherwise cause a brief hitch the moment a port wakes back up — relevant mainly for wired, high-polling-rate mice.</p>
+<p><code>DisablePagingExecutive</code> and the increased <code>IoPageLockLimit</code> (Section 8) keep more kernel code pinned in RAM instead of eligible to be paged to disk. This mattered more when spinning hard drives were common; on a modern system with 16GB+ RAM and an NVMe SSD, the practical difference is small.</p>
+</section>
+
+<section id="security">
+<h2>The one line that's a security trade-off, not a performance one</h2>
+<div class="callout warn">
+<strong class="label">SECTION 13 — READ THIS ONE</strong>
+<code>FeatureSettingsOverride</code> / <code>FeatureSettingsOverrideMask</code> set to 3 disables the CPU-level Spectre (branch target injection) and Meltdown (rogue data cache load) mitigations Microsoft shipped starting in early 2018. These mitigations carry a real, measurable overhead — more pronounced on older CPU generations and I/O-heavy workloads — so disabling them does recover some performance. But what they protect against is one process or privilege level reading memory it shouldn't. The practical exposure mainly shows up when untrusted or sandboxed code runs alongside anything sensitive — browser tabs, VMs, containers, a shared or multi-user machine. The script's own comment says this isn't recommended on a machine used for banking or sensitive work; that's the actual dividing line, not a formality to skip past.
+</div>
+</section>
+
+<section id="emulators">
+<h2>Emulator process priority</h2>
+<p>The <code>Image File Execution Options</code> entries for LDPlayer, BlueStacks, HD-Player, MEmu and Nox set CPU/IO/page priority automatically whenever those processes launch — the equivalent of manually setting "High priority" in Task Manager every time, made persistent. It only helps as much as the emulator's own settings (allocated CPU cores and RAM in its own configuration panel) allow — this doesn't substitute for those being set sensibly first.</p>
+</section>
+
+<section id="apply">
+<h2>How to apply it</h2>
+<ol>
+<li>Right-click the .reg file → <strong>Merge</strong>, accept the UAC prompt.</li>
+<li>Open Command Prompt <strong>as Administrator</strong> and run all four of:
+<pre><code>bcdedit /set useplatformclock false
+bcdedit /set disabledynamictick yes
+bcdedit /set tscsyncpolicy enhanced
+powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c</code></pre></li>
+<li>Reboot before judging any result — several of these (timer resolution, P-state) only take effect after a restart.</li>
+</ol>
+<p>These four commands set Boot Configuration Data, a different subsystem from the registry — that's why they can't be folded into the .reg file itself and need to be run separately.</p>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<details class="faq"><summary>Is this reversible?</summary><p>Mostly. The Spectre/Meltdown override and the CPU P-state lock are single-value flips back to their Windows defaults. Full reversal of every key is easiest by importing a fresh export of the same registry paths from an unmodified machine, or resetting each section manually.</p></details>
+<details class="faq"><summary>Will this work well on a laptop?</summary><p>Several settings here — the CPU P-state lock and disabled USB power saving especially — are meaningfully different trade-offs on battery power. This was written with a desktop in mind; expect more heat, fan noise and battery drain if you run it on a laptop.</p></details>
+<details class="faq"><summary>Do the bcdedit commands really need to be run separately?</summary><p>Yes — they modify Boot Configuration Data, not the registry, so a .reg file has no way to set them.</p></details>
+</section>
+
+<div class="related">
+<a href="windows-11-optimization.html">Windows 11 Deep Optimization<span>OS-level service and scheduling changes</span></a>
+<a href="windows-10-optimization.html">Windows 10 Optimization<span>The Windows 10 equivalent OS tuning</span></a>
+</div>
+</article>
+
+</main>
+<footer class="site">
+<div class="footer-grid">
+<div><p class="footer-tagline">Independent Windows tuning guides and free tools. Every script is published as plain text — read it before you run it.</p></div>
+<div><h4>GUIDES</h4><ul>
+<li><a href="../guides/clean-all-2-0.html">Clean All 2.0</a></li>
+<li><a href="../guides/windows-10-optimization.html">Windows 10 Optimization</a></li>
+<li><a href="../guides/windows-11-optimization.html">Windows 11 Deep Optimization</a></li>
+<li><a href="../guides/ultimateaim-v3-registry.html">UltimateAim v3 Registry</a></li>
+</ul></div>
+<div><h4>SITE</h4><ul>
+<li><a href="../about.html">About</a></li>
+<li><a href="../privacy.html">Privacy Policy</a></li>
+<li><a href="../contact.html">Contact</a></li>
+</ul></div>
+</div>
+<div class="footer-bottom"><span>© 2026 F2. Not affiliated with Microsoft or any emulator vendor named on this site.</span><span>Last reviewed September 12, 2026</span></div>
+</footer>
+</body>
+</html>

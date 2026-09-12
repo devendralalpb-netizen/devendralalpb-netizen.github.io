@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07090d">
+<title>Windows 10 Optimization script, explained setting by setting | F2 Optimization Guides</title>
+<meta name="description" content="What the telemetry, Cortana, OneDrive, Xbox and power changes in Windows10_Optimize.bat actually do — and who shouldn't run them.">
+<link rel="canonical" href="https://example.com/guides/windows-10-optimization.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Windows 10 Optimization script, explained setting by setting", "description": "What the telemetry, Cortana, OneDrive, Xbox and power changes in Windows10_Optimize.bat actually do \u2014 and who shouldn't run them.", "datePublished": "2026-09-12", "dateModified": "2026-09-12", "author": {"@type": "Person", "name": "F2"}, "mainEntityOfPage": "https://example.com/guides/windows-10-optimization.html"}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site">
+<div class="brand"><a href="../index.html">F2 <b>//</b> OPTIMIZATION GUIDES</a></div>
+<nav class="primary">
+<a href="../index.html">Home</a>
+<a href="../index.html#guides" class="active">Guides</a>
+<a href="../about.html">About</a>
+<a href="../privacy.html">Privacy</a>
+<a href="../contact.html">Contact</a>
+</nav>
+</header>
+<main id="main">
+
+<article>
+<div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <a href="../index.html#guides">Guides</a> <span class="sep">/</span> <span>Windows 10 Optimization</span></div>
+
+<h1>Windows 10 Optimization script, explained setting by setting</h1>
+<p class="dek">What the telemetry, Cortana, OneDrive, Xbox and power changes in Windows10_Optimize.bat actually do — and who shouldn't run them.</p>
+<div class="meta-row">
+  <span><strong>Category:</strong> OS-level tuning</span>
+  <span><strong>Format:</strong> .bat</span>
+  <span><strong>Reviewed:</strong> September 12, 2026</span><span>3 min read</span>
+  <span class="risk-pill mod">Moderate — disables background services</span>
+</div>
+
+<div class="toc">
+  <div class="toc__label">ON THIS PAGE</div>
+  <ol>
+    <li><a href="#services">Background services this script turns off</a></li>
+    <li><a href="#onedrive">OneDrive: full removal, not a toggle</a></li>
+    <li><a href="#power">Power, network and visual settings</a></li>
+    <li><a href="#p2p">Delivery Optimization (P2P updates)</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ol>
+</div>
+
+<div class="dl-box">
+  <div class="dl-box__info"><strong>Windows10_Optimize.bat</strong>Requires Administrator, targets Windows 10 builds</div>
+  <a class="dl-btn" href="../downloads/Windows10_Optimize.bat" download>Download .bat</a>
+</div>
+
+<section id="services">
+<h2>Background services this script turns off</h2>
+<p><strong>Telemetry.</strong> <code>DiagTrack</code> is the Connected User Experiences and Telemetry service — the client that packages and sends Windows diagnostic data. Disabling it and setting <code>AllowTelemetry</code> to 0 reduces what leaves the machine, but it doesn't eliminate data collection outright: Microsoft's own documentation describes multiple telemetry levels and collection paths, so treat this as a meaningful reduction, not a guarantee of zero data leaving the device.</p>
+<p><strong>Cortana / search policy.</strong> <code>AllowCortana</code> set to 0 turns off Cortana's search integration at the policy level.</p>
+<p><strong>Xbox services.</strong> <code>XblGameSave</code>, <code>XboxNetApiSvc</code> and <code>XboxGipSvc</code> handle Xbox Live save sync and controller/accessory pairing. If any games you play use Xbox cloud saves (common with Game Pass and Play Anywhere titles), disabling these stops that sync — worth checking before you run this if you rely on cross-device saves.</p>
+</section>
+
+<section id="onedrive">
+<h2>OneDrive: full removal, not a toggle</h2>
+<p>This isn't a setting flip — the script kills the OneDrive process and runs its own uninstaller, then blocks silent reinstallation via policy. Anyone using OneDrive for automatic document backup, screenshot sync, or Office autosave-to-cloud will lose that the moment this runs. It's reversible (re-run <code>OneDriveSetup.exe</code> manually, or reinstall from Microsoft), but it's a real removal, not a background toggle you can flip back with a registry edit alone.</p>
+</section>
+
+<section id="power">
+<h2>Power, network and visual settings</h2>
+<p>The script activates Windows' built-in <strong>High Performance</strong> power plan — maximum CPU clocks, minimal throttling. On a desktop that's plugged in permanently, that's close to a pure upside. On a laptop, it means faster battery drain and more fan noise even at idle; this plan was written with a desktop in mind.</p>
+<p><code>NetworkThrottlingIndex</code> and <code>SystemResponsiveness</code> control a Windows multimedia feature (MMCSS) originally built to reserve a slice of network capacity so background traffic wouldn't cause audio or video stutter. Setting the throttling index to its maximum value and responsiveness to 0 removes that reservation entirely. It doesn't add bandwidth — it just stops Windows from holding a slice back for itself.</p>
+<p>Visual effects are switched to a performance-oriented set via individual <code>UserPreferencesMask</code> and related values — disabling animations, transparency, and menu delay one setting at a time rather than through the single "Adjust for best performance" switch.</p>
+<div class="callout good">
+<strong class="label">A GENUINELY GOOD CHANGE</strong>
+Disabling SMB1 (step in the file system section) isn't just a performance tweak — SMB1 is an old, known-vulnerable protocol version (it was the vector used by WannaCry). Turning it off is a real security improvement almost every modern machine benefits from, with essentially no downside unless you have very old network hardware that specifically requires it.
+</div>
+</section>
+
+<section id="p2p">
+<h2>Delivery Optimization (P2P updates)</h2>
+<p>Windows can share update files peer-to-peer, both with PCs on your own network and, depending on settings, over the internet with other Windows machines. Setting <code>DODownloadMode</code> to 0 and disabling the <code>DoSvc</code> service turns that off: your machine pulls updates directly and only from Microsoft, and stops uploading pieces of updates to anyone else in the background.</p>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<details class="faq"><summary>Can I get OneDrive back after running this?</summary><p>Yes — download and run OneDriveSetup.exe again, or reinstall from Microsoft's site. It won't reappear on its own because of the policy block this script sets.</p></details>
+<details class="faq"><summary>Does disabling telemetry stop all data collection?</summary><p>No. It reduces the diagnostic data DiagTrack sends, but Microsoft collects some data through other mechanisms regardless of this setting. Treat it as a reduction, not a full opt-out.</p></details>
+<details class="faq"><summary>Is this reversible?</summary><p>Mostly. Re-enabling the disabled services and flipping the registry values back to their Windows defaults restores most of this. OneDrive specifically needs a manual reinstall.</p></details>
+</section>
+
+<div class="related">
+<a href="windows-11-optimization.html">Windows 11 Deep Optimization<span>The Windows 11 sibling script — and where it's riskier</span></a>
+<a href="clean-all-2-0.html">Clean All 2.0<span>The lower-risk cleanup pass</span></a>
+</div>
+</article>
+
+</main>
+<footer class="site">
+<div class="footer-grid">
+<div><p class="footer-tagline">Independent Windows tuning guides and free tools. Every script is published as plain text — read it before you run it.</p></div>
+<div><h4>GUIDES</h4><ul>
+<li><a href="../guides/clean-all-2-0.html">Clean All 2.0</a></li>
+<li><a href="../guides/windows-10-optimization.html">Windows 10 Optimization</a></li>
+<li><a href="../guides/windows-11-optimization.html">Windows 11 Deep Optimization</a></li>
+<li><a href="../guides/ultimateaim-v3-registry.html">UltimateAim v3 Registry</a></li>
+</ul></div>
+<div><h4>SITE</h4><ul>
+<li><a href="../about.html">About</a></li>
+<li><a href="../privacy.html">Privacy Policy</a></li>
+<li><a href="../contact.html">Contact</a></li>
+</ul></div>
+</div>
+<div class="footer-bottom"><span>© 2026 F2. Not affiliated with Microsoft or any emulator vendor named on this site.</span><span>Last reviewed September 12, 2026</span></div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07090d">
+<title>Windows 11 Deep Optimization: what changed from Windows 10, and what got riskier | F2 Optimization Guides</title>
+<meta name="description" content="The Windows 11 script deletes several services outright instead of disabling them — including two your system depends on more than you'd expect.">
+<link rel="canonical" href="https://example.com/guides/windows-11-optimization.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Windows 11 Deep Optimization: what changed from Windows 10, and what got riskier", "description": "The Windows 11 script deletes several services outright instead of disabling them \u2014 including two your system depends on more than you'd expect.", "datePublished": "2026-09-12", "dateModified": "2026-09-12", "author": {"@type": "Person", "name": "F2"}, "mainEntityOfPage": "https://example.com/guides/windows-11-optimization.html"}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site">
+<div class="brand"><a href="../index.html">F2 <b>//</b> OPTIMIZATION GUIDES</a></div>
+<nav class="primary">
+<a href="../index.html">Home</a>
+<a href="../index.html#guides" class="active">Guides</a>
+<a href="../about.html">About</a>
+<a href="../privacy.html">Privacy</a>
+<a href="../contact.html">Contact</a>
+</nav>
+</header>
+<main id="main">
+
+<article>
+<div class="breadcrumb"><a href="../index.html">Home</a> <span class="sep">/</span> <a href="../index.html#guides">Guides</a> <span class="sep">/</span> <span>Windows 11 Deep Optimization</span></div>
+
+<h1>Windows 11 Deep Optimization: what changed from Windows 10, and what got riskier</h1>
+<p class="dek">The Windows 11 script deletes several services outright instead of disabling them — including two your system depends on more than you'd expect.</p>
+<div class="meta-row">
+  <span><strong>Category:</strong> OS-level tuning</span>
+  <span><strong>Format:</strong> .bat</span>
+  <span><strong>Reviewed:</strong> September 12, 2026</span><span>3 min read</span>
+  <span class="risk-pill mod">Moderate-high — deletes services, not just disables</span>
+</div>
+
+<div class="toc">
+  <div class="toc__label">ON THIS PAGE</div>
+  <ol>
+    <li><a href="#same-idea">Same idea, sharper edges</a></li>
+    <li><a href="#delete-vs-disable">Delete vs. disable — why it matters</a></li>
+    <li><a href="#two-deletions">The two deletions worth knowing about first</a></li>
+    <li><a href="#everything-else">Everything else</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ol>
+</div>
+
+<div class="dl-box">
+  <div class="dl-box__info"><strong>Windows11_Optimize.bat</strong>Requires Administrator, targets Windows 11 builds</div>
+  <a class="dl-btn" href="../downloads/Windows11_Optimize.bat" download>Download .bat</a>
+</div>
+
+<section id="same-idea">
+<h2>Same idea, sharper edges</h2>
+<p>This script covers the same ground as the <a href="windows-10-optimization.html">Windows 10 Optimization script</a> — telemetry, Cortana, OneDrive, Xbox services, Game DVR, visual effects, power and network tuning — rebuilt for Windows 11's service set, plus Widgets and the taskbar Chat icon. The mechanism/why for those shared settings is covered in that guide rather than repeated here; this page focuses on what's actually different.</p>
+</section>
+
+<section id="delete-vs-disable">
+<h2>Delete vs. disable — why it matters</h2>
+<p>The Windows 10 script uses <code>sc config &lt;service&gt; start= disabled</code> for the services it turns off — the service stays registered, and flipping <code>start=</code> back to <code>demand</code> or <code>auto</code> restores it in one command. This script uses <code>sc delete</code> for several services instead, which removes the service's registry entry under <code>HKLM\SYSTEM\CurrentControlSet\Services</code> entirely. Windows won't just recreate that on its own — getting a deleted built-in service back generally means <code>sfc /scannow</code>, <code>DISM /Online /Cleanup-Image /RestoreHealth</code>, or waiting for the next feature update to rebuild it. That's a meaningfully bigger step than the Windows 10 script asks you to take.</p>
+</section>
+
+<section id="two-deletions">
+<h2>The two deletions worth knowing about first</h2>
+<div class="callout warn">
+<strong class="label">WSearch</strong>
+This is the Windows Search service — it powers the Start menu's search box and File Explorer's search/index. Deleting it means typing into Start stops returning app and file results. If you use Start search regularly, this is an immediately noticeable change, not a background one.
+</div>
+<div class="callout warn">
+<strong class="label">BITS</strong>
+Background Intelligent Transfer Service handles resumable background downloads — and Windows Update itself leans on it for background transfers, alongside Windows Defender definition updates and some game launchers. Worth noting: this same script sets <code>wuauserv</code> to manual/demand-start rather than disabling it outright, which only makes sense if Windows Update is still expected to work on demand — but deleting BITS undercuts exactly the mechanism Update needs for that. If you want Windows Update to keep functioning at all, either skip the BITS deletion line or change it to <code>sc config BITS start= disabled</code> instead of <code>sc delete</code>.
+</div>
+</section>
+
+<section id="everything-else">
+<h2>Everything else</h2>
+<p>Search Indexer (<code>WSearch</code>, disabled separately from the delete step above in some builds) and <code>SysMain</code> (Superfetch) are turned off to cut background RAM/CPU use — SysMain's job is pre-loading frequently used apps into memory, which costs some idle RAM in exchange for faster launches; disabling it trades that away. CPU P-state is locked at 100% min/max via <code>powercfg</code>, similar in effect to the Windows 10 script's High Performance plan but set more explicitly at the processor level. Game DVR and Widgets/Chat are disabled the same way as their Windows 10 counterparts.</p>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<details class="faq"><summary>Start menu search stopped working after I ran this — why?</summary><p>Almost certainly the WSearch deletion above. The safe fix is <code>sfc /scannow</code> followed by <code>DISM /Online /Cleanup-Image /RestoreHealth</code>, rather than trying to hand-recreate the service entry — built-in service registration has enough moving parts (image path, dependencies, service type) that a manual <code>sc create</code> is easy to get subtly wrong.</p></details>
+<details class="faq"><summary>Windows Update won't check for updates anymore — is that this script?</summary><p>Likely the BITS deletion combined with Update set to manual. Same fix as above (SFC/DISM), or avoid deleting BITS in the first place.</p></details>
+<details class="faq"><summary>Is this reversible?</summary><p>The disabled services and registry values, yes. The deleted services (BITS, WSearch, and the others removed with <code>sc delete</code>) need a system file repair rather than a simple setting flip.</p></details>
+</section>
+
+<div class="related">
+<a href="windows-10-optimization.html">Windows 10 Optimization<span>The gentler sibling — disables instead of deletes</span></a>
+<a href="ultimateaim-v3-registry.html">UltimateAim v3 Registry<span>Mouse input and MMCSS scheduling tweaks</span></a>
+</div>
+</article>
+
+</main>
+<footer class="site">
+<div class="footer-grid">
+<div><p class="footer-tagline">Independent Windows tuning guides and free tools. Every script is published as plain text — read it before you run it.</p></div>
+<div><h4>GUIDES</h4><ul>
+<li><a href="../guides/clean-all-2-0.html">Clean All 2.0</a></li>
+<li><a href="../guides/windows-10-optimization.html">Windows 10 Optimization</a></li>
+<li><a href="../guides/windows-11-optimization.html">Windows 11 Deep Optimization</a></li>
+<li><a href="../guides/ultimateaim-v3-registry.html">UltimateAim v3 Registry</a></li>
+</ul></div>
+<div><h4>SITE</h4><ul>
+<li><a href="../about.html">About</a></li>
+<li><a href="../privacy.html">Privacy Policy</a></li>
+<li><a href="../contact.html">Contact</a></li>
+</ul></div>
+</div>
+<div class="footer-bottom"><span>© 2026 F2. Not affiliated with Microsoft or any emulator vendor named on this site.</span><span>Last reviewed September 12, 2026</span></div>
+</footer>
+</body>
+</html>
